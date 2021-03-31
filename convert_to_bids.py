@@ -16,12 +16,12 @@ if op.exists(bids_root):
 raw_files = Path(data_path).rglob("*_meg-raw.fif")
 
 event_id = {
-    "low_lexical": 11,
-    "high_lexical": 21,
-    "low_control": 31,
-    "high_control": 41,
-    "low_target": 16,
-    "high_target": 26,
+    "lexical/low": 11,
+    "lexical/high": 21,
+    "nonlex/low": 31,
+    "nonlex/high": 41,
+    "target/low": 16,
+    "target/high": 26,
 }
 
 for rr in raw_files:
@@ -37,6 +37,7 @@ for rr in raw_files:
         events_data=op.join(rr.parent, op.basename(rr)[:-4] + "-eve.fif"),
         event_id=event_id,
         overwrite=True,
+        anonymize=dict(daysback=1000)
     )
     # ERM
     erm_fname = op.join(data_path, 'sub-nbwr'+sid, 'raw_fif', op.basename(rr)[:-11] + "erm-raw.fif")
