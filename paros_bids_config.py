@@ -19,43 +19,43 @@ from mne_bids.path import get_entity_vals
 
 study_name = "paros-bids"
 bids_root = "/Users/ktavabi/MEG/paros/bids"
-deriv_root = "/Users/ktavabi/MEG/paros/bids/derivatives/paros"
 subjects_dir = "/Users/ktavabi/freesurfer"
 interactive = False
 crop = [200, 600]
 sessions = "all"
-task = str = "lexicaldecision"
+task = "lexicaldecision"
 eeg_bipolar_channels = {
     "HEOG": ("HEOG_left", "HEOG_right"),
     "VEOG": ("VEOG_lower", "VEOG_upper"),
 }
-ch_types = ['meg']
+
 ###############################################################################
 # MAXWELL FILTER PARAMETERS
 # -------------------------
 # done in 01-import_and_maxfilter.py
 use_maxwell_filter = True
-mf_reference_run = '01'
-find_flat_channels_meg =  True
-find_noisy_channels_meg =  True
-mf_st_duration =  10.0
+find_flat_channels_meg = True
+find_noisy_channels_meg = True
+mf_st_duration = 10.0
 mf_head_origin = "auto"
-mf_reference_run =  None
-mf_cal_fname =  None
-mf_ctc_fname =  None
+mf_cal_fname = "/Users/ktavabi/Github/mnefun/mnefun/data/sss_cal.dat"
+mf_ctc_fname = "/Users/ktavabi/Github/mnefun/mnefun/data/ct_sparse.fif"
+ch_types = ['meg']
+data_type = 'meg'
+
 ###############################################################################
 # STIMULATION ARTIFACT
 # --------------------
 # used in 01-import_and_maxfilter.py
-fix_stim_artifact =  False
-stim_artifact_tmin =  0.0
-stim_artifact_tmax =  0.01
+fix_stim_artifact = False
+stim_artifact_tmin = 0.0
+stim_artifact_tmax = 0.01
 ###############################################################################
 # FREQUENCY FILTERING
 # -------------------
 # done in 02-frequency_filter.py
-l_freq =  None
-h_freq =  55.0
+l_freq = None
+h_freq = 55.0
 ###############################################################################
 # RESAMPLING
 # ----------
@@ -94,7 +94,7 @@ n_boot = 5000
 ###############################################################################
 # GROUP AVERAGE SENSORS
 # ---------------------
-interpolate_bads_grand_average = True
+# interpolate_bads_grand_average = True
 ###############################################################################
 # TIME-FREQUENCY
 # --------------
@@ -107,16 +107,13 @@ recreate_bem = False
 spacing = "oct6"
 mindist = float = 5
 inverse_method = "dSPM"
-process_er = False
-noise_cov = ["emptyroom"]
-
-
+process_er = True
+noise_cov = "emptyroom"
 ###############################################################################
 # ADVANCED
 # --------
 l_trans_bandwidth = "auto"
 h_trans_bandwidth = "auto"
-N_JOBS = 4
 shortest_event = 1
 allow_maxshield = True
 log_level = "info"
