@@ -5,7 +5,13 @@ import numpy as np
 
 import mne
 import numpy as np
-from mne_bids import BIDSPath, read_raw_bids, print_dir_tree, make_report, write_raw_bids
+from mne_bids import (
+    BIDSPath,
+    read_raw_bids,
+    print_dir_tree,
+    make_report,
+    write_raw_bids,
+)
 from mnefun import extract_expyfun_events
 
 
@@ -20,54 +26,56 @@ def score(file_path):
 
     # get subject performance
     # boolean mask using modulus of target event and 2
-    targets = (events[:, 2] % 2 == 0)
+    targets = events[:, 2] % 2 == 0
     has_presses = np.array([len(pr) > 0 for pr in presses], bool)
     n_targets = np.sum(targets)
     hits = np.sum(has_presses[targets])
     false_alarms = np.sum(has_presses[~targets])
     misses = n_targets - hits
-    print('HMF: %s, %s, %s' % (hits, misses, false_alarms))
+    print("HMF: %s, %s, %s" % (hits, misses, false_alarms))
     return events
 
 
 bids_root = "/Users/ktavabi/MEG"
-subjects = ['007',
-            '017',
-            '038',
-            '081',
-            '088',
-            '107',
-            '110',
-            '132',
-            '135',
-            '136',
-            '144',
-            '215',
-            '226',
-            '301',
-            '307',
-            '309',
-            '317',
-            '401',
-            '404',
-            '405',
-            '407',
-            '409',
-            '421',
-            '426',
-            '427',
-            '428',
-            '431',
-            '432',
-            '437',
-            '440',
-            '442',
-            '443',
-            '444',
-            '447',
-            '448',
-            '449',
-            '451']
+subjects = [
+    "007",
+    "017",
+    "038",
+    "081",
+    "088",
+    "107",
+    "110",
+    "132",
+    "135",
+    "136",
+    "144",
+    "215",
+    "226",
+    "301",
+    "307",
+    "309",
+    "317",
+    "401",
+    "404",
+    "405",
+    "407",
+    "409",
+    "421",
+    "426",
+    "427",
+    "428",
+    "431",
+    "432",
+    "437",
+    "440",
+    "442",
+    "443",
+    "444",
+    "447",
+    "448",
+    "449",
+    "451",
+]
 event_id = {
     "lexical/low": 11,
     "lexical/high": 21,
@@ -78,35 +86,48 @@ event_id = {
 }
 
 print_dir_tree(bids_root, max_depth=3)
-datatype = 'meg'
+datatype = "meg"
 bids_path = BIDSPath(root=bids_root, datatype=datatype)
 
-task = 'lexicaldecision'
-suffix = 'meg'
+task = "lexicaldecision"
+suffix = "meg"
 
 for subject in subjects:
-    bids_path = BIDSPath(subject=subject, task=task, suffix=suffix,
-                         datatype=datatype, root=bids_root)
+    bids_path = BIDSPath(
+        subject=subject,
+        task=task,
+        suffix=suffix,
+        datatype=datatype,
+        root=bids_root,
+    )
 
-    raw_fname = op.join(bids_root, 'sub-%s_task-%s_%s.fif' %
-                        (subject, task, suffix))
+    raw_fname = op.join(
+        bids_root, "sub-%s_task-%s_%s.fif" % (subject, task, suffix)
+    )
     events_data = score(raw_fname)
-    output_path = op.join(bids_root, '..', subject)
+    output_path = op.join(bids_root, "..", subject)
     raw = mne.io.read_raw_fif(raw_fname, allow_maxshield=True)
     # specify power line frequency as required by BIDS
-    raw.info['line_freq'] = 60
+    raw.info["line_freq"] = 60
 
-    write_raw_bids(raw, bids_path, events_data=events_data,
-                   event_id=event_id, overwrite=True)
+    write_raw_bids(
+        raw,
+        bids_path,
+        events_data=events_data,
+        event_id=event_id,
+        overwrite=True,
+    )
 
     print(bids_path)
 
     # ERM
-    erm_fname = op.join(bids_root, 'sub-%s_task-noise_%s.fif' %
-                        (subject, suffix))
+    erm_fname = op.join(
+        bids_root, "sub-%s_task-noise_%s.fif" % (subject, suffix)
+    )
     erm = mne.io.read_raw_fif(erm_fname, allow_maxshield="yes")
     erm.info["line_freq"] = 60
     er_date = erm.info["meas_date"].strftime("%Y%m%d")
-    er_bids_path = BIDSPath(subject="emptyroom", session=er_date,
-                            task="noise", root=bids_root)
+    er_bids_path = BIDSPath(
+        subject="emptyroom", session=er_date, task="noise", root=bids_root
+    )
     write_raw_bids(erm, er_bids_path, overwrite=True)

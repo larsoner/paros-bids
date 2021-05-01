@@ -18,7 +18,7 @@ import mne
 from mne_bids.path import get_entity_vals
 
 study_name = "paros-bids"
-bids_root = "/Users/ktavabi/MEG/paros/bids"
+bids_root = "/Users/ktavabi/MEG/"
 subjects_dir = "/Users/ktavabi/freesurfer"
 interactive = False
 crop = [200, 600]
@@ -28,6 +28,7 @@ eeg_bipolar_channels = {
     "HEOG": ("HEOG_left", "HEOG_right"),
     "VEOG": ("VEOG_lower", "VEOG_upper"),
 }
+# subjects = []
 
 ###############################################################################
 # MAXWELL FILTER PARAMETERS
@@ -64,7 +65,7 @@ decim = 1
 ###############################################################################
 # AUTOMATIC REJECTION OF ARTIFACTS
 # --------------------------------
-reject = {"grad": 4000e-13, "mag": 4e-12, "eeg": 150e-6}
+reject = dict(grad=4000e-13, mag=4e-12)
 reject_tmin = -0.2
 reject_tmax = 1.3
 ###############################################################################
@@ -74,8 +75,7 @@ rename_events = dict()
 ###############################################################################
 # EPOCHING
 # --------
-conditions = ["lexical", "nonlexical"]
-conditions = ["lexical/high", "lexical/low"]
+conditions = ["lexical", "nonlex", "lexical/high", "lexical/low"]
 epochs_tmin = -0.2
 epochs_tmax = 1.3
 baseline = (None, 0)
@@ -102,6 +102,7 @@ time_frequency_conditions = ["lexical", "nonlex"]
 ###############################################################################
 # SOURCE ESTIMATION PARAMETERS
 # ----------------------------
+run_source_estimation = False
 bem_mri_images = "auto"
 recreate_bem = False
 spacing = "oct6"
