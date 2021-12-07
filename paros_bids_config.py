@@ -1,24 +1,5 @@
-import importlib
-import functools
-import os
-import pdb
-import traceback
-import sys
-import copy
-import coloredlogs
-import logging
-from typing import Optional, Union, Iterable
-try:
-    from typing import Literal
-except ImportError:  # Python <3.8
-    from typing_extensions import Literal
-
-import numpy as np
-import mne
-from mne_bids.path import get_entity_vals
-
 study_name = "paros-bids"
-bids_root = "/Users/ktavabi/MEG/"
+bids_root = "/Users/ktavabi/MEG/paros-bids"
 subjects_dir = "/Users/ktavabi/freesurfer"
 interactive = False
 crop = [200, 600]
@@ -41,8 +22,8 @@ mf_st_duration = 10.0
 mf_head_origin = "auto"
 mf_cal_fname = "/Users/ktavabi/Github/mnefun/mnefun/data/sss_cal.dat"
 mf_ctc_fname = "/Users/ktavabi/Github/mnefun/mnefun/data/ct_sparse.fif"
-ch_types = ['meg']
-data_type = 'meg'
+ch_types = ["meg"]
+data_type = "meg"
 
 ###############################################################################
 # STIMULATION ARTIFACT
@@ -65,7 +46,9 @@ decim = 1
 ###############################################################################
 # AUTOMATIC REJECTION OF ARTIFACTS
 # --------------------------------
-reject = dict(mag=3000e-15, grad=3000e-13)
+# reject = dict(mag=3000e-15, grad=3000e-13)
+reject = dict(mag=6000e-15, grad=6000e-13)
+
 reject_tmin = -0.2
 reject_tmax = 1.3
 ###############################################################################
@@ -106,7 +89,7 @@ run_source_estimation = False
 bem_mri_images = "auto"
 recreate_bem = False
 spacing = "oct6"
-mindist = float = 5
+mindist = 5
 inverse_method = "dSPM"
 process_er = True
 noise_cov = "emptyroom"

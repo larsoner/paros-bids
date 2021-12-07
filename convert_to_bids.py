@@ -1,17 +1,9 @@
 import os.path as op
-import shutil
-from pathlib import Path
-import numpy as np
 
 import mne
 import numpy as np
-from mne_bids import (
-    BIDSPath,
-    read_raw_bids,
-    print_dir_tree,
-    make_report,
-    write_raw_bids,
-)
+from mne_bids import (BIDSPath, print_dir_tree,
+                      write_raw_bids)
 from mnefun import extract_expyfun_events
 
 
