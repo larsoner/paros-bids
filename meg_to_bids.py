@@ -2,8 +2,7 @@ import os.path as op
 
 import mne
 import numpy as np
-from mne_bids import (BIDSPath, print_dir_tree,
-                      write_raw_bids)
+from mne_bids import BIDSPath, print_dir_tree, write_raw_bids
 from mnefun import extract_expyfun_events
 
 
@@ -28,7 +27,7 @@ def score(file_path):
     return events
 
 
-bids_root = "/Users/ktavabi/MEG"
+bids_root = "/Volumes/LaCie/MEG/paros-bids"
 subjects = [
     "007",
     "017",
@@ -44,7 +43,6 @@ subjects = [
     "215",
     "226",
     "301",
-    "307",
     "309",
     "317",
     "401",
@@ -113,9 +111,7 @@ for subject in subjects:
     print(bids_path)
 
     # ERM
-    erm_fname = op.join(
-        bids_root, "sub-%s_task-noise_%s.fif" % (subject, suffix)
-    )
+    erm_fname = op.join(bids_root, "sub-%s_erm_raw.fif" % subject)
     erm = mne.io.read_raw_fif(erm_fname, allow_maxshield="yes")
     erm.info["line_freq"] = 60
     er_date = erm.info["meas_date"].strftime("%Y%m%d")

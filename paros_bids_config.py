@@ -1,6 +1,6 @@
 study_name = "paros-bids"
-bids_root = "/Users/ktavabi/MEG/paros-bids"
-subjects_dir = "/Users/ktavabi/freesurfer"
+bids_root = "/Volumes/LaCie/MEG/paros-bids"
+subjects_dir = "/Volumes/LaCie/freesurfer"
 interactive = False
 crop = [200, 600]
 sessions = "all"
@@ -77,7 +77,7 @@ n_boot = 5000
 ###############################################################################
 # GROUP AVERAGE SENSORS
 # ---------------------
-# interpolate_bads_grand_average = True
+interpolate_bads_grand_average = True
 ###############################################################################
 # TIME-FREQUENCY
 # --------------

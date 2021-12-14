@@ -71,7 +71,7 @@ df.drop(labels=["name"], axis=1, inplace=True)
 df = df.reorder_columns(['subject', 'hemisphere', 'mrsi', 'value']).encode_categorical(column_names=['hemisphere', 'mrsi'])
 df['tx'] = df['subject'].apply(lambda x: 'asd' if np.int16(x) < 400 else 'td')
 df.head()
-df = df[df.subject != '307']
+# df = df[df.subject != '307']
 # df.to_csv('out.csv')
 
 
