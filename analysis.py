@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # %%
 import os.path as op
+from scipy.misc import derivative
+from scipy import stats as stats
 import pandas as pd
 import pandas_flavor as pf
 import janitor  # noqa
 import numpy as np
 import mne
-from mne import io, combine_evoked
-from mne.minimum_norm import make_inverse_operator, apply_inverse
+from mne import spatial_src_adjacency
+from mne.stats import spatio_temporal_cluster_test, summarize_clusters_stc
+from mne import io, combine_evoked, read_source_estimate
+
+%config InlineBackend.figure_format = "retina"
 %matplotlib inline
 
 # PANDAS parameters
@@ -48,9 +53,10 @@ def explode(df: pd.DataFrame, column_name: str, sep: str):
 # %%
 # Workspace parameters
 seed = np.random.seed(42)
-mrsi_data = "/Users/ktavabi/Documents/Projects/nbwr/nbwr/static/all_nbwr_mrs_results_csfcorr_fits_20180417.xlsx"
-root = '/Users/ktavabi/MEG/paros-bids/derivatives/mne-bids-pipeline'
-subjects_dir = '/Users/ktavabi/freesurfer'
+mrsi_data = "/Users/ktavabi/Documents/Projects/paros-bids/static/all_nbwr_mrs_results_csfcorr_fits_20180417.xlsx"
+bidsroot = "/Volumes/LaCie/MEG/paros-bids"
+derivatives = bidsroot + "/derivatives/mne-bids-pipeline/"
+subjects_dir = "/Volumes/LaCie/freesurfer"
 
 # %%
 f = pd.ExcelFile(mrsi_data)
@@ -68,49 +74,42 @@ df[["hemisphere", "mrsi"]] = df.name.apply(
     lambda x: pd.Series(str(x).split("_", 1))
 )
 df.drop(labels=["name"], axis=1, inplace=True)
-df = df.reorder_columns(['subject', 'hemisphere', 'mrsi', 'value']).encode_categorical(column_names=['hemisphere', 'mrsi'])
-df['tx'] = df['subject'].apply(lambda x: 'asd' if np.int16(x) < 400 else 'td')
+df = df.reorder_columns(
+    ["subject", "hemisphere", "mrsi", "value"]
+).encode_categorical(column_names=["hemisphere", "mrsi"])
+df["grp"] = df["subject"].apply(lambda x: "asd" if np.int16(x) < 400 else "td")
+df = df[df.subject != "307"]
 df.head()
-# df = df[df.subject != '307']
-# df.to_csv('out.csv')
-
 
 # %%
+subjects = df["subject"].unique()
+p_threshold = 1 / (2 ** len(subjects))
+fsaverage = '/Volumes/LaCie/freesurfer/fsaverage/bem/fsaverage-oct6-src.fif'
+# compute adjacency
+adjacency = mne.spatial_src_adjacency(mne.read_source_spaces(fsaverage))
+files = [op.join(derivatives, f"sub-{grp}{subj}", "meg", f"sub-{grp}{subj}_
+TD = [read_source_spaces(fs) for fs in files]
+t_threshold = -stats.distributions.t.ppf(p_threshold / 2., len(subjects) - 1)
+print('Clustering.')
+T_obs, clusters, cluster_p_values, H0 = clu = \
+    spatio_temporal_cluster_1samp_test(X, adjacency=adjacency, n_jobs=1,
+                                       threshold=t_threshold, buffer_size=None,
+                                       verbose=True)
+#    Now select the clusters that are sig. at p < 0.05 (note that this value
+#    is multiple-comparisons corrected).
+good_cluster_inds = np.where(cluster_p_values < 0.05)[0]
+# %%
+assets = dict()
 erfs = dict()
-for group in ('asd', 'td'):
-    erfs[group] = list()
-    subjects = df[df['tx'] == group]['subject'].unique()
-    assets = [op.join(root, 'sub-%s' % subject, 'meg','sub-%s_task-lexicaldecision_ave.fif') % subject for subject in sorted(subjects)]
-    for ii in (0, 1):  # lexical/nonlexical
-        erfs[group].append([mne.Evoked(asset, condition=ii, proj=True, kind="average") for asset in assets])
+conds = ['word', 'nonword']
+groups = ['asd', 'td']
 
-
-# %%
-for group in ('asd', 'td'):
-    mne.viz.plot_compare_evokeds(erfs[group],
-    legend='upper left', show_sensors='upper right')
-
-
-# %%
-stcs = dict()
-residuals = dict()
-for group in ('asd', 'td'):
-    stcs[group] = list()
-    residuals[group] = list()
-    subjects = df[df['tx'] == group]['subject'].unique()
-    for subject in sorted(subjects):
-        epochsfile = op.join(root, 'sub-%s' % subject, 'meg','sub-%s_task-lexicaldecision_epo.fif') % subject
-        epochs = mne.read_epochs(epochsfile)
-        noise_cov = mne.compute_covariance(epochs, tmax=0., method=['shrunk', 'empirical'], rank=None, verbose=True)
-        evokedfile = op.join(root, 'sub-%s' % subject, 'meg','sub-%s_task-lexicaldecision_ave.fif') % subject
-        erfs = [mne.Evoked(evokedfile, condition=ii, proj=True, kind="average") for ii in [0, 1]]  # lexical/nonlexical
-        info = mne.io.read_info(evokedfile)
-        src = subjects_dir + '/sub-nbwr%s/bem/sub-nbwr%s_ses-1_fsmempr_ti1100_rms_1_freesurf_hires-oct-6-src.fif' % (subject, subject)
-        bem = subjects_dir + '/sub-nbwr%s/bem/sub-nbwr%s-5120-5120-5120-bem-sol.fif' % (subject, subject)
-        fwd = mne.make_forward_solution(info, 'fsaverage', src, bem)
-        kernel = make_inverse_operator(info, fwd, noise_cov, loose=0.2, depth=0.8)
-        del fwd
-        output = [apply_inverse(erf, kernel, lambda2=0.111111, method='dSPM', pick_ori=None, return_residual=True, verbose=True) for erf in erfs]
-    stcs[group].append(output[0])
-    residuals[group].append(output[1])
-# %%
+for ix, (cond, grp) in enumerate(zip(conds, groups)):
+    erfs[cond] = list()
+    subjects = df[df["grp"] == grp]["subject"].unique()
+    for subj in subjects:
+        read_in = op.join(derivatives, f"sub-{grp}{subj}", "meg", f"sub-{grp}{subj}_task-lexicaldecision_ave.fif")
+        erfs[cond].append(mne.read_evokeds(read_in, kind='average')[ix])
+    assert len(erfs[cond]) == len(subjects)
+    assets[grp] = erfs[cond]  # XXX Pydantic here?
+mne.viz.plot_compare_evokeds(assets['asd'])

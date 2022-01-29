@@ -2,7 +2,13 @@ import os.path as op
 
 import mne
 import numpy as np
-from mne_bids import BIDSPath, print_dir_tree, write_raw_bids
+from mne_bids import (
+    BIDSPath,
+    get_anat_landmarks,
+    print_dir_tree,
+    write_anat,
+    write_raw_bids,
+)
 from mnefun import extract_expyfun_events
 
 
@@ -28,6 +34,7 @@ def score(file_path):
 
 
 bids_root = "/Volumes/LaCie/MEG/paros-bids"
+subjects_dir = "/Volumes/LaCie/freesurfer"
 subjects = [
     "007",
     "017",
@@ -66,6 +73,7 @@ subjects = [
     "449",
     "451",
 ]
+
 event_id = {
     "lexical/low": 11,
     "lexical/high": 21,
@@ -107,9 +115,25 @@ for subject in subjects:
         event_id=event_id,
         overwrite=True,
     )
-
-    print(bids_path)
-
+    # MRI scan
+    t1_fname = op.join(subjects_dir, f"sub-{subject}", "mri", "T1.mgz")
+    # transformation matrix
+    trans = mne.read_trans(op.join(bids_root, f"sub-{subject}-trans.fif"))
+    t1w_bids_path = BIDSPath(subject=subject, root=bids_root, suffix="T1w")
+    landmarks = get_anat_landmarks(
+        t1_fname,
+        info=raw.info,
+        trans=trans,
+        fs_subject=f"sub-{subject}",
+        fs_subjects_dir=subjects_dir,
+    )
+    t1w_bids_path = write_anat(
+        image=t1_fname,
+        bids_path=t1w_bids_path,
+        landmarks=landmarks,
+        verbose=True,
+    )
+    anat_dir = t1w_bids_path.directory
     # ERM
     erm_fname = op.join(bids_root, "sub-%s_erm_raw.fif" % subject)
     erm = mne.io.read_raw_fif(erm_fname, allow_maxshield="yes")
@@ -119,3 +143,4 @@ for subject in subjects:
         subject="emptyroom", session=er_date, task="noise", root=bids_root
     )
     write_raw_bids(erm, er_bids_path, overwrite=True)
+    print(bids_path)
