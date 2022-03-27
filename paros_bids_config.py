@@ -1,5 +1,6 @@
 study_name = "paros-bids"
 bids_root = "/Volumes/LaCie/MEG/paros-bids"
+deriv_root = f"{bids_root}/derivatives/bids-pipeline"
 subjects_dir = "/Volumes/LaCie/freesurfer"
 interactive = False
 sessions = "all"
@@ -9,22 +10,22 @@ eeg_bipolar_channels = {
     "VEOG": ("VEOG_lower", "VEOG_upper"),
 }
 subjects = [
-    "007",
-    "017",
-    "038",
-    "081",
-    "088",
-    "107",
-    "110",
-    "132",
-    "135",
-    "136",
-    "144",
-    "215",
-    "226",
-    "301",
-    "309",
-    "317",
+    #"007",
+    #"017",
+    #"038",
+    #"081",
+    #"088",
+    #"107",
+    #"110",
+    #"132",
+    #"135",
+    #"136",
+    #"144",
+    #"215",
+    #"226",
+    #"301",
+    #"309",
+    #"317",
     "401",
     "404",
     "405",
@@ -108,11 +109,6 @@ decoding_metric = "roc_auc"
 decoding_n_splits = 5
 n_boot = 5000
 #########################################################################
-# GROUP AVERAGE SENSORS
-# ---------------------
-group_average_sensors = False
-interpolate_bads_grand_average = False
-#########################################################################
 # TIME-FREQUENCY
 # --------------
 time_frequency_conditions = ["lexical", "nonlex"]
@@ -139,3 +135,4 @@ allow_maxshield = True
 log_level = "info"
 mne_log_level = "error"
 on_error = "debug"
+N_JOBS = 2
