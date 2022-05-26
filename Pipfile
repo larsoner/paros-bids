@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+mne = {editable = true, path = "/Users/ktavabi/Github/mne-python"}
+pyjanitor = "*"
+ipykernel = "*"
+seaborn = "*"
+scikit-learn = "*"
+ipympl = "*"
+openpyxl = "*"
+pandas-profiling = "*"
+jupyterlab = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"
