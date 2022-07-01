@@ -4,17 +4,21 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-mne = {editable = true, path = "/Users/ktavabi/Github/mne-python"}
-pyjanitor = "*"
-ipykernel = "*"
+mne = {git = "https://github.com/mne-tools/mne-python.git", editable = true, ref = "v1.0.3"}
+mne-bids = {git = "https://github.com/mne-tools/mne-bids.git", editable = true, ref = "v0.10"}
+mne-connectivity = {git = "https://github.com/mne-tools/mne-connectivity.git", editable = true, ref = "v0.3"}
+scipy = "*"
+jupyter = "*"
+pandas = "*"
+janitor = "*"
+sklearn = "*"
 seaborn = "*"
-scikit-learn = "*"
-ipympl = "*"
-openpyxl = "*"
+pandas-flavor = "*"
+pyjanitor = "*"
 pandas-profiling = "*"
-jupyterlab = "*"
+ipympl = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
