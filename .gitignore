@@ -180,7 +180,7 @@ junit-results.xml
 *.tmproj
 *.png
 *.dat
-.DS_Store
+*.DS_Store
 
 *.html
 
