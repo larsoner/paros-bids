@@ -17,6 +17,7 @@ pandas-flavor = "*"
 pyjanitor = "*"
 pandas-profiling = "*"
 ipympl = "*"
+openpyxl = "*"
 
 [dev-packages]
 
