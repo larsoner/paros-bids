@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# -*-coding:utf-8 -*-
+"""mne bids configuration"""
+
 study_name = "paros-bids"
 bids_root = "/Volumes/LaCie/paros-bids"
 deriv_root = f"{bids_root}/derivatives/bids-pipeline"

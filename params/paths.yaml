@@ -1,0 +1,4 @@
+data_root: '/Volumes/LaCie/paros-bids'
+subjects_dir: '/Volumes/LaCie/freesurfer'
+results_dir: '/Volumes/LaCie/paros-bids/derivatives/bids-pipeline'
+bids_root: "/Volumes/LaCie/paros-bids"

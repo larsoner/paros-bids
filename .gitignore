@@ -196,6 +196,7 @@ junit-results.xml
 
 # Visual Studio Code
 .vscode
+*.code-workspace
 
 # Emacs
 *.py#

@@ -1,14 +1,6 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
-"""
-@File    :   classification.py
-@Time    :   2022/07/12 01:02:57
-@Author  :   Kambiz Tavavi
-@Version :   0.1
-@Contact :   ktavabi@gmail.com
-@License :   MIT License (C)Copyright 2022, Kambiz Tavabi
-@Desc    :   paros-bids LOGIT classification script
-"""
+"""Classify data between groups and rank feature importance"""
 # %%
 import os.path as op
 
@@ -40,27 +32,27 @@ pd.set_option("display.width", 500)
 
 
 @pf.register_dataframe_method
-def str_remove(df, column_name: str, pattern: str = ""):
+def str_remove(_df, column_name: str, pattern: str = ""):
     """Wrapper to remove string patten from a column"""
-    df[column_name] = df[column_name].str.replace(pattern, "")
-    return df
+    _df[column_name] = _df[column_name].str.replace(pattern, "")
+    return _df
 
 
 @pf.register_dataframe_method
-def explode(df: pd.DataFrame, column_name: str, sep: str):
+def explode(_df: pd.DataFrame, column_name: str, sep: str):
     """Wrapper to expand column after text processing"""
-    df["id"] = df.index
-    wdf = (
-        pd.DataFrame(df[column_name].str.split(sep).fillna("").tolist())
+    _df["id"] = _df.index
+    w_df = (
+        pd.DataFrame(_df[column_name].str.split(sep).fillna("").tolist())
         .stack()
         .reset_index()
     )
     # exploded_column = column_name
-    wdf.columns = ["id", "depth", column_name]  # plural form to singular form
-    # wdf[column_name] = wdf[column_name].apply(lambda x: x.strip())  # trim
-    wdf.drop("depth", axis=1, inplace=True)
+    w_df.columns = ["id", "depth", column_name]  # plural form to singular form
+    # w_df[column_name] = w_df[column_name].apply(lambda x: x.strip())  # trim
+    w_df.drop("depth", axis=1, inplace=True)
 
-    return pd.merge(df, wdf, on="id", suffixes=("_drop", "")).drop(
+    return pd.merge(_df, w_df, on="id", suffixes=("_drop", "")).drop(
         columns=["id", column_name + "_drop"]
     )
 
@@ -81,38 +73,38 @@ payload_dir = "/Users/kam/Documents/Projects/Job/paros-bids/payload"
 # %%
 f = pd.ExcelFile(mrsi_data)
 data = f.parse(sheet_name="FSLcorr_metab", header=1)
-df = data.clean_names().str_remove("subject", pattern="sub-nbwr")
-pivot_long_on = df.columns.values[1:]
-df = df.pivot_longer(
+_df = data.clean_names().str_remove("subject", pattern="sub-nbwr")
+pivot_long_on = _df.columns.values[1:]
+_df = _df.pivot_longer(
     column_names=pivot_long_on,
     names_to="name",
     values_to="value",
     sort_by_appearance=True,
 )
 
-df[["hemisphere", "mrsi"]] = df.name.apply(lambda x: pd.Series(str(x).split("_", 1)))
+_df[["hemisphere", "mrsi"]] = _df.name.apply(lambda x: pd.Series(str(x).split("_", 1)))
 
-df.drop(labels=["name"], axis=1, inplace=True)
-df = df.reorder_columns(["subject", "hemisphere", "mrsi", "value"]).encode_categorical(
+_df.drop(labels=["name"], axis=1, inplace=True)
+_df = _df.reorder_columns(["subject", "hemisphere", "mrsi", "value"]).encode_categorical(
     column_names=["hemisphere", "mrsi"]
 )
-df["grp"] = df["subject"].apply(lambda x: "asd" if np.int16(x) < 400 else "td")
-df["hemisphere"] = df["hemisphere"].map({"left": "lh", "right": "rh"})
-df = df[df.subject != "307"]
-df = pd.pivot_table(
-    df, values="value", index=["subject", "hemisphere", "grp"], columns=["mrsi"]
+_df["grp"] = _df["subject"].apply(lambda x: "asd" if np.int16(x) < 400 else "td")
+_df["hemisphere"] = _df["hemisphere"].map({"left": "lh", "right": "rh"})
+_df = _df[_df.subject != "307"]
+_df = pd.pivot_table(
+    _df, values="value", index=["subject", "hemisphere", "grp"], columns=["mrsi"]
 ).reset_index()
 
 # %%
-print(df.head())
+print(_df.head())
 
-subjects = df["subject"].unique()
+subjects = _df["subject"].unique()
 print(subjects)
 meg_latency = np.zeros((len(subjects), 2, 2))  # subjects*conditions*hemisphere
 meg_pos = np.zeros_like(meg_latency)
 
 # Blow-up (subjects * conditions * hemisphere) into labeled TIDY data frame
-_df = jn.expand_grid(
+__df = jn.expand_grid(
     others={"subject": subjects, "condition": [1, 2], "hemisphere": ["lh", "rh"]}
 )
 
@@ -136,8 +128,8 @@ nn, cc, hh = meg_latency.shape
 xs = nn * cc * hh
 stc_data = np.hstack((meg_latency.reshape(xs, 1), meg_pos.reshape(xs, 1)))
 stc_data = pd.DataFrame(stc_data, columns=["latency", "pos"])  # unlabeled meg features
-df_meg = pd.concat([_df, stc_data], axis=1, ignore_index=True).clean_names()
-df_meg = df_meg.rename_columns(
+_df_meg = pd.concat([__df, stc_data], axis=1, ignore_index=True).clean_names()
+_df_meg = _df_meg.rename_columns(
     new_column_names={
         "0": "subject",
         "1": "condition",
@@ -146,7 +138,7 @@ df_meg = df_meg.rename_columns(
         "4": "position",
     }
 )
-DATASET = pd.merge(df, df_meg, on=["subject", "hemisphere"], how="inner")
+DATASET = pd.merge(_df, _df_meg, on=["subject", "hemisphere"], how="inner")
 print(DATASET.describe())
 
 
@@ -209,58 +201,69 @@ ax.set_ylabel("Features")
 fig.tight_layout()
 plt.show()
 
-# The permutation feature importance is defined to be the decrease in a model score when a single feature value is randomly shuffled [1].
-
-# [1] L. Breiman, “Random Forests”, Machine Learning, 45(1), 5-32, 2001.
-
-
 # %%
-_filter_by = ["gaba", "glu_80ms", "gluovergaba", "latency", "condition", "hemisphere"]
-_grp_by = ["grp"]
-filteredData = DATASET[_grp_by + _filter_by]
-_encode = {1: "lexical", 2: "nonlexical"}
-filteredData["stimulus"] = filteredData["condition"].map(_encode)
-filteredData.drop(["condition"], axis=1, inplace=True)
+cols = [
+    "Creatine",
+    "GABA",
+    "GABA|Creatine",
+    "Glutamate",
+    "E/I",
+    "Choline",
+    "Myoinositol",
+    "NAA",
+    "Latency",
+]
+_df = DATASET.drop(columns=["condition", "hemisphere", "position"])
+fg = sns.FacetGrid(_df, row="grp", despine=True, height=10)
 
-
-def draw_heatmap(*args, **kwargs):
-    """seaborn heatmap helper"""
-    _data = kwargs.pop("data")
-    _d = _data.pivot(index=args[1], columns=args[0], values=args[2])
-    sns.heatmap(_d, **kwargs)
-
-
-cmap = sns.color_palette("ch:s=.25,rot=-.25", as_cmap=True)
-fg = sns.FacetGrid(
-    filteredData, row="grp", col="stimulus", margin_titles=True, despine=True, height=5
-)
 fg.map_dataframe(
     lambda data, color: sns.heatmap(
         data.corr(method="spearman"),
+        square=True,
         vmin=-1,
         vmax=1,
-        cmap="PiYG",
+        linewidths=0.5,
+        cbar_kws={"shrink": 0.5},
+        cmap="BrBG",
+        fmt=".2f",
         annot=True,
-        annot_kws={"size": 50 / np.sqrt(len(data))},
+        mask=np.triu(np.ones_like(data.corr())),
+        annot_kws={"size": 100 / np.sqrt(len(data))},
+        yticklabels=cols,
+        xticklabels=cols,
     )
 )
 
-# get figure background color
-facecolor = plt.gcf().get_facecolor()
-for ax in fg.axes.flat:
-    for tick in ax.xaxis.get_major_ticks():
-        tick.label.set_fontsize(8)
-        tick.label.set_rotation(90)
-    for tick in ax.yaxis.get_major_ticks():
-        tick.label.set_fontsize(8)
-        tick.label.set_rotation(0)
-    # set aspect of all axis
-    ax.set_aspect("equal")
-    # set background color of axis instance
-    # ax.set_axis_bgcolor(facecolor)
-plt.show()
+titles = ["ASD", "TD"]
+
+for ax, title in zip(fg.axes.flatten(), titles):
+    ax.set_title(title)
+
+
+# %%
+plt.figure(figsize=(8, 12))
+heatmap = sns.heatmap(
+    _df.corr(method="spearman")[["gluovergaba"]].sort_values(
+        by="gluovergaba", ascending=False
+    ),
+    vmin=-1,
+    vmax=1,
+    annot=True,
+    cmap="BrBG",
+)
+heatmap.set_title(
+    "Features Correlating with E/I ratio", fontdict={"fontsize": 12}, pad=16
+)
 
 #%% [markdown]
 # # Results
-# According to the correlation (Spearman's $\rho=-0.25$) between non-word evoked response peak latency and glutamate measurements is a robust indication of abbarant excitatory neurotransmission in ASD subject. Indicating that upto 25% of variance in the data is accounted for by an interaction between MEEG and MRSI features.
-# %%
+# According to the correlation (Spearman's $\rho=-0.25$) between non-word 
+# evoked response peak latency and glutamate measurements is a robust 
+# indication of abbarant excitatory neurotransmission in ASD subject. 
+# Indicating that upto 25% of variance in the data is accounted for by an 
+# interaction between MEEG and MRSI features.
+# The permutation feature importance is defined to be the decrease in a model 
+# score when a single feature value is randomly shuffled [1].
+
+# [1] L. Breiman, “Random Forests”, Machine Learning, 45(1), 5-32, 2001.
+
