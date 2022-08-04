@@ -1,7 +1,32 @@
+# DONE:
+# - Get running
+# - Check events are correct
+#
+# DOING:
+# - Running freesurfer for all subjects
+# - Run source estimation
+# - Check source space images in report
+#
+# TODO:
+# - Use mxne to get 2-dipole solutions
+# - Mark bad channels manually
+# - Check movement to see if we need movecomp
+# - Add run_ssp step
+# - Reenable decoding
+# - Fix dataset to be anonymized and rerun
+# - Update dataset_description.json
+# - Add MF stuff to dataset rather than specifying path
+
+from pathlib import Path
+import mnefun
+this_dir = Path(__file__).parent
+mf_path = Path(mnefun.__file__).parent / 'data'
+
+N_JOBS = 4
+on_error = "continue"
+
 study_name = "paros-bids"
-bids_root = "/Volumes/LaCie/paros-bids"
-deriv_root = f"{bids_root}/derivatives/bids-pipeline"
-subjects_dir = "/Volumes/LaCie/freesurfer"
+bids_root = this_dir / 'paros-bids'
 interactive = False
 sessions = "all"
 task = "lexicaldecision"
@@ -51,35 +76,27 @@ subjects = [
 ###############################################################################
 # MAXWELL FILTER PARAMETERS
 # -------------------------
-# done in 01-import_and_maxfilter.py
 use_maxwell_filter = True
 find_flat_channels_meg = True
 find_noisy_channels_meg = True
-mf_st_duration = 100.0
+mf_st_duration = 10.0
 mf_head_origin = "auto"
-mf_cal_fname = "/Users/ktavabi/Github/mnefun/mnefun/data/sss_cal.dat"
-mf_ctc_fname = "/Users/ktavabi/Github/mnefun/mnefun/data/ct_sparse.fif"
+mf_cal_fname = mf_path / 'sss_cal.dat'
+mf_ctc_fname = mf_path / 'ct_sparse.fif'
 ch_types = ["meg"]
 data_type = "meg"
 
 ###############################################################################
-# STIMULATION ARTIFACT
-# --------------------
-# used in 01-import_and_maxfilter.py
-fix_stim_artifact = False
-stim_artifact_tmin = 0.0
-stim_artifact_tmax = 0.01
-###############################################################################
 # FREQUENCY FILTERING
 # -------------------
-# done in 02-frequency_filter.py
 l_freq = None
-h_freq = 55.0
+h_freq = 40.0
+
 #########################################################################
 # RESAMPLING
 # ----------
-resample_sfreq = 500
-decim = 1
+decim = 5
+
 #########################################################################
 # AUTOMATIC REJECTION OF ARTIFACTS
 # --------------------------------
@@ -105,15 +122,11 @@ use_ssp = True
 #########################################################################
 # DECODING
 # --------
-decode = True
+decode = False
 decoding_metric = "roc_auc"
 decoding_n_splits = 5
 n_boot = 5000
-#########################################################################
-# TIME-FREQUENCY
-# --------------
-time_frequency_conditions = ["lexical", "nonlex"]
-time_frequency_subtract_evoked = True
+
 #########################################################################
 # SOURCE ESTIMATION PARAMETERS
 # ----------------------------
@@ -127,14 +140,3 @@ source_info_path_update = {"processing": "clean", "suffix": "epo"}
 inverse_method = "dSPM"
 process_er = True
 noise_cov = "emptyroom"
-#########################################################################
-# ADVANCED
-# --------
-l_trans_bandwidth = "auto"
-h_trans_bandwidth = "auto"
-shortest_event = 1
-allow_maxshield = True
-log_level = "info"
-mne_log_level = "error"
-on_error = "debug"
-N_JOBS = 6
