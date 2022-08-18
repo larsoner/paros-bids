@@ -1,9 +1,10 @@
 # DONE:
 # - Get running
 # - Check events are correct
+# - Running FreeSurfer recon-all for all subjects
 #
 # DOING:
-# - Running freesurfer for all subjects
+# - Creating BEMs and head surfaces for all subjects
 # - Run source estimation
 # - Check source space images in report
 #
@@ -23,7 +24,7 @@ this_dir = Path(__file__).parent
 mf_path = Path(mnefun.__file__).parent / 'data'
 
 N_JOBS = 4
-on_error = "continue"
+on_error = "debug"
 
 study_name = "paros-bids"
 bids_root = this_dir / 'paros-bids'
@@ -115,10 +116,12 @@ epochs_tmax = 1.3
 baseline = (None, 0)
 contrasts = [("lexical", "nonlex"), ("lexical/high", "lexical/low")]
 interpolate_bads_grand_average = True
+
 #########################################################################
 # ARTIFACT REMOVAL
 # ----------------
-use_ssp = True
+spatial_filter = None  # TODO: "ssp"
+
 #########################################################################
 # DECODING
 # --------
@@ -132,11 +135,10 @@ n_boot = 5000
 # ----------------------------
 run_source_estimation = True
 bem_mri_images = "T1"
-recreate_bem = True
 freesurfer_verbose = False
 spacing = "oct6"
 mindist = 5
 source_info_path_update = {"processing": "clean", "suffix": "epo"}
 inverse_method = "dSPM"
 process_er = True
-noise_cov = "emptyroom"
+noise_cov = (None, 0)  # "emptyroom"

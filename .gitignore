@@ -206,4 +206,5 @@ junit-results.xml
 node_modules/**
 
 *.json
-
+*.h5
+*.csv
