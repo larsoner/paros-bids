@@ -85,7 +85,7 @@ if not source_path.is_file():
             source_data[subject][sanitize(condition)] = ltc
     h5io.write_hdf5(source_path, source_data)
 source_data = h5io.read_hdf5(source_path)
-assert source_data[subjects[0]][conditions[0]].shape == (len(label_names), len(source_data['times']))  # noqa
+assert source_data[subjects[0]][conditions[0].replace('/', '_')].shape == (len(label_names), len(source_data['times']))  # noqa
 del labels
 
 # Create "grand-average" subject (and other relevant groups) that is an
@@ -185,7 +185,7 @@ for subject in subjects + list(groups):
         this_evoked.nave = 1
         used = np.zeros(len(evoked.ch_names), bool)
         this_data = source_data[subject][sanitize(condition)]
-        for ci, sel in enumerate(selections):
+        for si, sel in enumerate(selections):
             picks = mne.pick_channels(evoked.ch_names, sel, ordered=True)
             assert 10 < len(picks) < 50, len(picks)
             assert not used[picks].any()
@@ -193,12 +193,12 @@ for subject in subjects + list(groups):
             if subject in groups:
                 assert ltc.ndim == 3 and ltc.shape[0] == len(groups[subject])
                 ltc = ltc.mean(axis=0)  # across all subjects
-            assert ltc.shape == (len(conditions), len(source_data['times']),)
-            ltc = ltc[ci]
+            assert ltc.shape == (len(label_names), len(source_data['times']),)
+            ltc = ltc[si]
             this_evoked.data[picks] = ltc
             used[picks] = True
         used = used.sum()
-        assert 50 < used < 200
+        assert 50 < used < 235
         evokeds.append(this_evoked)
     assert len(evokeds) == len(conditions)
     mne.write_evokeds(
