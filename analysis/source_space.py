@@ -14,7 +14,8 @@ sys.path.append(str(this_dir / '..'))
 
 import paros_bids_config
 
-write_evokeds = False
+write_evokeds = True
+plot_resp = True
 
 results_dir = this_dir / 'results'
 results_dir.mkdir(exist_ok=True)
@@ -84,6 +85,7 @@ if not source_path.is_file():
             source_data[subject][sanitize(condition)] = ltc
     h5io.write_hdf5(source_path, source_data)
 source_data = h5io.read_hdf5(source_path)
+assert source_data[subjects[0]][conditions[0]].shape == (len(label_names), len(source_data['times']))  # noqa
 del labels
 
 # Create "grand-average" subject (and other relevant groups) that is an
@@ -160,7 +162,11 @@ for label_name in label_names:
     else:
         assert '-rh' in label_name
         first = 'Right'
-    if 'Auditory' in label_name:
+    if 'Association' in label_name:
+        assert 'Early' not in label_name
+        assert 'Frontal' not in label_name
+        second = 'parietal'
+    elif 'Early' in label_name:
         assert 'Frontal' not in label_name
         second = 'temporal'
     else:
@@ -208,6 +214,8 @@ colors = {
     'nonlex/low': '#AA3377',
 }
 for subject in subjects + list(groups):
+    if not plot_resp:
+        break
     this_data = np.array([
         source_data[subject][sanitize(condition)]
         for condition in conditions])
