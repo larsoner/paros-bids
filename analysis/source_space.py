@@ -33,6 +33,8 @@ labels = mne.read_labels_from_annot(
 label_names = [
     'Early Auditory Cortex-lh',
     'Early Auditory Cortex-rh',
+    'Auditory Association Cortex-lh',
+    'Auditory Association Cortex-rh',
     'Inferior Frontal Cortex-lh',
     'Inferior Frontal Cortex-rh',
 ]
@@ -215,13 +217,14 @@ for subject in subjects + list(groups):
     else:
         m = this_data
         s = None
-    assert len(label_names) == 4
+    assert len(label_names) == 6
     want_shape = (len(conditions), len(label_names), len(source_data['times']))
     assert m.shape == want_shape, (m.shape, want_shape)
     if s is not None:
         assert s.shape == want_shape, (s.shape, want_shape)
-    fig, axes = plt.subplots(2, 2, figsize=(10, 6), constrained_layout=True,
-                             sharex=True)
+    fig, axes = plt.subplots(
+        2, 2, figsize=(10, 3 * len(label_names) // 2), constrained_layout=True,
+        sharex=True)
     axes = axes.ravel()
     for li, (ax, label_name) in enumerate(zip(axes, label_names)):
         hs = list()
