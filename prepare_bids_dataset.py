@@ -32,6 +32,8 @@ def score(file_path):
     print("HMF: %s, %s, %s" % (hits, misses, false_alarms))
     return events
 
+# GABA_080, 210, 310: No MEG appointment date listed, files not found
+# GABA_307: listed as "disq from CLOUDS (hearing screening)", MEG file found but probably shouldn't use
 
 bids_root = "/Volumes/LaCie/MEG/paros-bids"
 subjects_dir = "/Volumes/LaCie/freesurfer"

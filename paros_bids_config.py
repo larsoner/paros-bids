@@ -2,17 +2,17 @@
 # - Get running
 # - Check events are correct
 # - Running FreeSurfer recon-all for all subjects
-#
-# DOING:
 # - Creating BEMs and head surfaces for all subjects
 # - Run source estimation
+#
+# DOING:
 # - Check source space images in report
 #
 # TODO:
-# - Use mxne to get 2-dipole solutions
-# - Mark bad channels manually
-# - Check movement to see if we need movecomp
 # - Add run_ssp step
+# - Enable autoreject
+#
+# - Check movement to see if we need movecomp
 # - Reenable decoding
 # - Fix dataset to be anonymized and rerun
 # - Update dataset_description.json
@@ -101,9 +101,7 @@ decim = 5
 #########################################################################
 # AUTOMATIC REJECTION OF ARTIFACTS
 # --------------------------------
-# reject = dict(mag=3000e-15, grad=3000e-13)
 reject = "autoreject_global"
-
 reject_tmin = -0.2
 reject_tmax = 1.3
 
@@ -116,11 +114,14 @@ epochs_tmax = 1.3
 baseline = (None, 0)
 contrasts = [("lexical", "nonlex"), ("lexical/high", "lexical/low")]
 interpolate_bads_grand_average = True
+reject = 'autoreject_global'
 
 #########################################################################
 # ARTIFACT REMOVAL
 # ----------------
-spatial_filter = None  # TODO: "ssp"
+spatial_filter = "ssp"
+ssp_ecg_reject = "autoreject_global"
+ssp_eog_reject = "autoreject_global"
 
 #########################################################################
 # DECODING

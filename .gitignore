@@ -208,3 +208,5 @@ node_modules/**
 *.json
 *.h5
 *.csv
+analysis/results*/
+analysis/*h5*
