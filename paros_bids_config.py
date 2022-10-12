@@ -4,17 +4,16 @@
 # - Running FreeSurfer recon-all for all subjects
 # - Creating BEMs and head surfaces for all subjects
 # - Run source estimation
-#
-# DOING:
-# - Check source space images in report
+# - Added run_ssp step
+# - Enabled autoreject
+# - Add behavioral data to CSVs
 #
 # TODO:
-# - Add run_ssp step
-# - Enable autoreject
-#
+# - Add ERS/ERD
 # - Check movement to see if we need movecomp
 # - Reenable decoding
 # - Fix dataset to be anonymized and rerun
+# - Figure out how to BIDS-ize behavioral data
 # - Update dataset_description.json
 # - Add MF stuff to dataset rather than specifying path
 
@@ -23,7 +22,7 @@ import mnefun
 this_dir = Path(__file__).parent
 mf_path = Path(mnefun.__file__).parent / 'data'
 
-N_JOBS = 4
+N_JOBS = 2
 on_error = "debug"
 
 study_name = "paros-bids"
@@ -130,6 +129,12 @@ decode = False
 decoding_metric = "roc_auc"
 decoding_n_splits = 5
 n_boot = 5000
+
+#########################################################################
+# TIME-FREQUENCY ANALYSIS
+# -----------------------
+time_frequency_conditions = ["lexical", "nonlex"]
+time_frequency_subtract_evoked = True  # induced activity
 
 #########################################################################
 # SOURCE ESTIMATION PARAMETERS

@@ -7,25 +7,30 @@ import numpy as np
 import openpyxl
 import matplotlib.pyplot as plt
 import h5io
-from scipy import stats
+from scipy import stats, signal
 import mne
-from mnefun import clean_brain
+from mnefun import clean_brain, extract_expyfun_events
+from expyfun.analyze import dprime
 
 this_dir = Path(__file__).parent
-sys.path.append(str(this_dir / '..'))
+if str(this_dir / '..') not in sys.path:
+    sys.path.insert(0, str(this_dir / '..'))
 
 import paros_bids_config
+import paros_bids_utils
 
-write_evokeds = True
+write_evokeds = False
 plot_resp = False
 plot_nave_figure = False
-plot_brain_figure = True
+plot_brain_figure = False
+plot_n100 = False
 fixed_ori = False
+method = 'MNE'  # or dSPM
 
 results_dir = this_dir / 'results'
 results_dir.mkdir(exist_ok=True)
 
-subjects = [f'sub-{s}' for s in paros_bids_config.subjects]
+subjects = paros_bids_utils.get_subjects()
 task = 'task-lexicaldecision'
 mbp_path = paros_bids_config.bids_root / 'derivatives' / 'mne-bids-pipeline'
 subjects_dir = (
@@ -62,8 +67,9 @@ conditions = ('lexical/high', 'lexical/low', 'nonlex/high', 'nonlex/low')
 def sanitize(condition):
     return condition.replace('/', '_')
 
-
-extra = '_abs' if not fixed_ori else ''
+extra = ''
+extra += '_abs' if not fixed_ori else ''
+extra += f'_{method}' if method != 'dSPM' else ''
 source_path = this_dir / f'time_courses{extra}.h5'
 src = mne.read_source_spaces(
     subjects_dir / 'fsaverage' / 'bem' / 'fsaverage-ico-5-src.fif')
@@ -91,7 +97,7 @@ if not source_path.is_file():
                 pick_ori = None
                 mode = 'mean'
             stc = mne.minimum_norm.apply_inverse(
-                evoked, inv, method='dSPM', pick_ori=pick_ori)
+                evoked, inv, method=method, pick_ori=pick_ori)
             stc_fs = morph.apply(stc)
             ltc = mne.extract_label_time_course(
                 stc_fs, labels, src, mode=mode)
@@ -99,58 +105,21 @@ if not source_path.is_file():
                 source_data['times'] = stc.times
             assert np.allclose(source_data['times'], stc.times)
             assert ltc.shape == (len(labels), len(stc.times))
+            if method == 'MNE':
+                ltc *= 1e9  # nAm
+            else:
+                assert method == 'dSPM'
             source_data[subject][sanitize(condition)] = ltc
             source_data[subject]['nave'][sanitize(condition)] = evoked.nave
             if condition == conditions[0]:
                 print(f' ({evoked.nave} trials)')
     h5io.write_hdf5(source_path, source_data)
 source_data = h5io.read_hdf5(source_path)
-assert source_data[subjects[0]][conditions[0].replace('/', '_')].shape == (len(label_names), len(source_data['times']))  # noqa
+assert source_data[subjects[0]][sanitize(conditions[0])].shape == (len(label_names), len(source_data['times']))  # noqa
 
 # Create "grand-average" subject (and other relevant groups) that is an
 # `ndarray` of all subjects so we can plot mean+/-SEM as well
-static_dir = this_dir / '..' / 'static'
-wb = openpyxl.load_workbook(
-    static_dir / 'GABA_subject_information.xlsx')
-ws = [ws for ws in wb.worksheets if ws.title == 'Matches'][0]
-asd_col, con_col = 1, 4
-assert ws.cell(1, asd_col).value == 'ASD', ws.cell(1, asd_col).value
-assert ws.cell(1, con_col).value == 'Control', ws.cell(1, con_col).value
-asd = list()
-con = list()
-for ri in range(2, 100):
-    val = ws.cell(ri, asd_col).value
-    if not val:
-        break
-    asd.append('sub-' + val.split('_')[-1])
-    val = ws.cell(ri, con_col).value
-    con.append('sub-' + val.split('_')[-1])
-assert set(asd).intersection(set(con)) == set()
-missing_match = set(subjects).difference(set(asd).union(set(con)))
-if missing_match:
-    print(f'Missing from matching map: {sorted(missing_match)}')
-missing_con = set(con).difference(set(subjects))
-if missing_con:
-    print(f'Missing from control data: {sorted(missing_con)}')
-# 421 is missing its match
-print('  Removing 451 from con')
-con.pop(con.index('sub-451'))
-missing_asd = set(asd).difference(set(subjects))
-if missing_asd:
-    print(f'Missing from asd data:     {sorted(missing_asd)}')
-    for key in missing_asd:
-        print(f'  Removing {key} from asd')
-        asd.pop(asd.index(key))
-
-assert len(subjects) == 36, len(subjects)
-groups = {
-    'grand-average': asd + con,
-    'asd': asd,
-    'control': con,
-}
-assert len(asd) == 16, len(asd)
-assert len(con) == 16, len(con)
-del asd, con
+groups = paros_bids_utils.get_groups()
 want_sizes = {
     'grand-average': 32,  # only uses the relevant ones
     'asd': 16,
@@ -243,7 +212,7 @@ for subject in subjects + list(groups):
 # Show mean for each condition for each subject, then as grand average.
 # Use 2 columns (left/right) and 2 rows (frontal/auditory), each with
 # four traces (one per condition); grand average should have the SEM.
-colors = {
+colors_cond = {
     'lexical/high': '#66CCEE',
     'lexical/low': '#4477AA',
     'nonlex/high': '#EE6677',
@@ -278,13 +247,13 @@ for subject in subjects + list(groups):
             h_labels.append(condition)
             hs.append(ax.plot(
                 source_data['times'], m[ci, li], zorder=4,
-                color=colors[condition])[0])
+                color=colors_cond[condition])[0])
             if s is not None:
                 ax.fill_between(
                     source_data['times'],
                     m[ci, li] - s[ci, li],
                     m[ci, li] + s[ci, li],
-                    alpha=0.5, zorder=3, color=colors[condition],
+                    alpha=0.5, zorder=3, color=colors_cond[condition],
                     edgecolor='none')
         ax.axhline(0 if fixed_ori else 1, color='k', zorder=2, lw=1, ls='--')
         sps = ax.get_subplotspec()
@@ -313,6 +282,99 @@ for subject in subjects + list(groups):
     if subject not in groups:
         plt.close(fig)
 
+
+n100s = dict()
+if plot_n100:
+    n_col = int(np.ceil(np.sqrt(len(subjects))))
+    n_row = (len(subjects) - 1) // n_col + 1
+    fig, axes = plt.subplots(
+        n_row, n_col, figsize=(2 * n_col, 1.5 * n_row),
+        constrained_layout=True, sharex=True, sharey=True)
+for si, subject in enumerate(subjects):
+    tmin, tmax = 0.0, 0.3
+    n100s[subject] = dict()
+    ax = axes.ravel()[si] if plot_n100 else None
+    for li, label in enumerate(label_names):
+        if not label.startswith('Early Auditory Cortex'):
+            continue
+        n100s[subject][label] = dict()
+        for condition in conditions:
+            start = np.argmin(np.abs(source_data['times'] - tmin))
+            stop = np.argmin(np.abs(source_data['times'] - tmax))
+            d = source_data[subject][sanitize(condition)][li]
+
+            # Find the peak between start and stop
+            use_d = d[start:stop]
+            use_d = signal.detrend(use_d, type='linear')
+            if not fixed_ori:
+                idx = np.argmax(use_d)
+                sign = 1
+            else:
+                idx = np.argmin(use_d)
+                sign = -1
+            idx += start
+            n100s[subject][label][condition] = dict(
+                time=1000 * source_data['times'][idx],
+                amplitude=sign * d[idx])  # nAm
+            if not plot_n100:
+                continue
+            color = colors_cond[condition]
+            ax.plot(
+                source_data['times'][start:stop],
+                d[start:stop], color=color, lw=0.5)
+            ax.plot(source_data['times'][idx], d[idx], 'o',
+                    markeredgecolor=color, markerfacecolor='none',
+                    lw=1, zorder=4)
+    if not plot_n100:
+        continue
+    ax.set(xlim=[tmin, tmax])  # source_data['times'][[0, -1]])
+    ax.set(title=subject.split('-')[-1])
+    ax.grid(True, ls=':', zorder=2)
+if plot_n100:
+    for ext in ('png', 'pdf'):
+        fig.savefig(results_dir / f'all{extra}-n100.{ext}')
+
+
+# Behavioral scores
+def score(file_path, subject):
+    """Scoring function"""
+    events, presses = extract_expyfun_events(file_path)[:2]
+    i = np.arange(len(events))
+    events[i, 2] -= 1
+    mask = events[i, 2] > 0
+    events = events[mask]
+    presses = np.array(presses, object)[mask].tolist()
+
+    # get subject performance
+    # boolean mask using modulus of target event and 2
+    targets = events[:, 2] % 2 == 0
+    has_presses = np.array([len(pr) > 0 for pr in presses], bool)
+    n_targets = np.sum(targets)
+    n_foils = np.sum(~targets)
+    hits = np.sum(has_presses[targets])
+    false_alarms = np.sum(has_presses[~targets])
+    misses = n_targets - hits
+    correct_rejects = n_foils - false_alarms
+    print(f"{subject} HMFC: {hits}, {misses}, {false_alarms}, {correct_rejects}")
+    return events, (hits, misses, false_alarms, correct_rejects)
+
+
+beh = list()
+beh_keys = ('hits', 'misses', 'fa', 'cr', 'dprime')
+for subject in subjects:
+    raw_fname = paros_bids_config.bids_root / subject / 'meg' / f'{subject}_{task}_meg.fif'  # noqa: E501
+    hmfc_fname = (mbp_path / subject / 'meg' / raw_fname.with_suffix('.hmfc').stem).with_suffix('.csv')  # noqa: E501
+    if not hmfc_fname.is_file():
+        _, hmfc = score(raw_fname, subject)
+        np.savetxt(hmfc_fname, hmfc, fmt='%d', header='h,m,fa,cr')
+    else:
+        hmfc = tuple(np.loadtxt(hmfc_fname).astype(int))
+    hmfcd = hmfc + (dprime(hmfc),)
+    beh.append(hmfcd)
+    assert len(beh[-1]) == len(beh_keys)
+    del hmfc, hmfcd, raw_fname
+assert np.array(beh).shape == (len(subjects), len(beh_keys))
+
 # Write CSVs
 header = ['subject']
 label_names_short = [
@@ -336,9 +398,28 @@ with open(results_dir / f'all{extra}-tois.csv', 'w') as fid:
                     row.append(
                         f'{source_data[subject][sanitize(condition)][li][start:stop].mean():0.6f}',  # noqa: E501
                     )
+        # Now also N100s
+        for label in n100s[subject]:
+            for condition in conditions:
+                this_n100s = n100s[subject][label][condition]
+                for key, val in this_n100s.items():
+                    if si == 0:
+                        header.append('_'.join([
+                            label_names_short[label_names.index(label)],
+                            f'n100-{key}',
+                            condition.replace("/", "-"),
+                        ]))
+                    row.append(f'{val:0.6f}')
+        # Behavioral scores
+        for key, val in zip(beh_keys, beh[si]):
+            if si == 0:
+                header.append(key)
+            row.append(f'{val}')
+        # Write header if necessary
         assert len(row) == len(header)
         if si == 0:
             fid.write(','.join(header) + '\n')
+        # Write the row
         fid.write(','.join(row) + '\n')
 
 if plot_nave_figure:
@@ -363,7 +444,7 @@ if plot_nave_figure:
 # Show mean for each condition for each subject, then as grand average.
 # Use 2 columns (left/right) and 2 rows (frontal/auditory), each with
 # four traces (one per condition); grand average should have the SEM.
-colors = {
+colors_group_cond = {
     'asd_lexical': '#66CCEE',
     'asd_nonlex': '#4477AA',
     'control_lexical': '#EE6677',
@@ -417,7 +498,7 @@ if plot_brain_figure:
                 s = np.std(this_data, axis=0)[li] / np.sqrt(len(this_data) - 1)
                 h_labels.append(
                     f'{group_nice[group]}\n{condition_nice[condition]}')
-                color = colors[f'{group}_{condition}']
+                color = colors_group_cond[f'{group}_{condition}']
                 hs.append(ax.plot(times, m, zorder=4, color=color, lw=1)[0])
                 ax.fill_between(times, m - s, m + s, alpha=0.5, zorder=3,
                                 color=color, edgecolor='none')
